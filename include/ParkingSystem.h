@@ -92,12 +92,7 @@ public:
     double getCurrentRate(VehicleType type) const;
     bool hasConfiguredRate(VehicleType type) const;
 
-    bool saveState(std::string& errorMessage) const;
-    bool loadState(std::string& errorMessage);
-
 private:
-    static constexpr const char* DEFAULT_DATA_FILE = "parking_data.dat";
-
     // NON-LINEAR: hash map for unique slot lookup and status updates.
     std::unordered_map<std::string, ParkingSlot> slotsById_;
 
@@ -108,11 +103,6 @@ private:
     std::vector<ParkingTransaction> transactionHistory_;
 
     PricingManager pricingManager_;
-
-    std::string dataFilePath_;
-
-    bool persistState() const;
-    void loadPersistedState();
 
     std::vector<std::string> findAvailableSlotIds(VehicleType vehicleType) const;
     int calculateBilledHours(long long durationMinutes) const;

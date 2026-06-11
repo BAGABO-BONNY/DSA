@@ -82,7 +82,6 @@ All data is stored **in memory only** (no database).
 - exit requested for vehicle not currently parked
 - revenue calculation overflow protection
 - EOF / bad console stream handled safely
-- persistent storage: slots, active sessions, transaction history, and rates saved to `parking_data.dat` after each change and on exit
 
 All failures return clear error messages instead of crashing.
 

@@ -16,8 +16,7 @@
 
 class ParkingSlot {
 public:
-    ParkingSlot(const std::string& id, VehicleType vehicleType, const std::string& zone,
-                SlotStatus status = SlotStatus::Available);
+    ParkingSlot(const std::string& id, VehicleType vehicleType, const std::string& zone);
 
     const std::string& getId() const;
     VehicleType getVehicleType() const;

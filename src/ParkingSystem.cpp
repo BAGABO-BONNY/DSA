@@ -4,71 +4,11 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <ctime>
-#include <fstream>
 #include <iomanip>
-#include <iostream>
 #include <sstream>
-#include <utility>
 
-namespace {
-
-constexpr const char* DATA_VERSION = "PARKING_DATA_V1";
-
-std::time_t toTimeT(std::chrono::system_clock::time_point timePoint) {
-    return std::chrono::system_clock::to_time_t(timePoint);
-}
-
-std::chrono::system_clock::time_point fromTimeT(std::time_t time) {
-    return std::chrono::system_clock::from_time_t(time);
-}
-
-std::vector<std::string> splitFields(const std::string& line, char delimiter) {
-    std::vector<std::string> fields;
-    std::string field;
-    std::istringstream stream(line);
-
-    while (std::getline(stream, field, delimiter)) {
-        fields.push_back(field);
-    }
-
-    return fields;
-}
-
-bool parseStoredVehicleType(const std::string& value, VehicleType& out) {
-    if (value == "Motorcycle") {
-        out = VehicleType::Motorcycle;
-        return true;
-    }
-    if (value == "Car") {
-        out = VehicleType::Car;
-        return true;
-    }
-    if (value == "Truck") {
-        out = VehicleType::Truck;
-        return true;
-    }
-    return false;
-}
-
-bool parseStoredSlotStatus(const std::string& value, SlotStatus& out) {
-    if (value == "Available") {
-        out = SlotStatus::Available;
-        return true;
-    }
-    if (value == "Occupied") {
-        out = SlotStatus::Occupied;
-        return true;
-    }
-    return false;
-}
-
-}  // namespace
-
-ParkingSystem::ParkingSystem() : dataFilePath_(DEFAULT_DATA_FILE) {
-    loadPersistedState();
-}
+ParkingSystem::ParkingSystem() = default;
 
 /**
  * Task 1 - Parking Slot Configuration
@@ -103,11 +43,6 @@ bool ParkingSystem::configureSlot(const std::string& slotId,
 
     // INSERT new slot object into hash map keyed by normalized slot ID.
     slotsById_.emplace(normalizedSlotId, ParkingSlot(normalizedSlotId, vehicleType, zone));
-
-    if (!persistState()) {
-        std::cout << "Warning: slot configured but data could not be saved to disk.\n";
-    }
-
     return true;
 }
 
@@ -203,11 +138,6 @@ bool ParkingSystem::registerVehicleEntry(const std::string& plateNumber,
         ParkingRecord(normalizedPlate, vehicleType, selectedSlotId, entryTime));
 
     allocatedSlotId = selectedSlotId;
-
-    if (!persistState()) {
-        std::cout << "Warning: vehicle entry recorded but data could not be saved to disk.\n";
-    }
-
     return true;
 }
 
@@ -289,11 +219,6 @@ bool ParkingSystem::processVehicleExit(const std::string& plateNumber,
     activeVehiclesByPlate_.erase(activeIt);        // DELETE from active map
 
     transaction = completed;
-
-    if (!persistState()) {
-        std::cout << "Warning: vehicle exit recorded but data could not be saved to disk.\n";
-    }
-
     return true;
 }
 
@@ -303,15 +228,7 @@ bool ParkingSystem::updateParkingPrice(VehicleType vehicleType, double newRate, 
         return false;
     }
 
-    if (!pricingManager_.updateHourlyRate(vehicleType, newRate, errorMessage)) {
-        return false;
-    }
-
-    if (!persistState()) {
-        std::cout << "Warning: price updated but data could not be saved to disk.\n";
-    }
-
-    return true;
+    return pricingManager_.updateHourlyRate(vehicleType, newRate, errorMessage);
 }
 
 // TRAVERSAL: copy all slots from hash map into sorted vector for display.
@@ -489,249 +406,4 @@ std::string ParkingSystem::formatDate(std::chrono::system_clock::time_point time
     std::ostringstream oss;
     oss << std::put_time(localTime, "%Y-%m-%d");
     return oss.str();
-}
-
-bool ParkingSystem::saveState(std::string& errorMessage) const {
-    const std::string tempPath = dataFilePath_ + ".tmp";
-
-    std::ofstream out(tempPath, std::ios::trunc);
-    if (!out) {
-        errorMessage = "Unable to open data file for writing.";
-        return false;
-    }
-
-    out << DATA_VERSION << "\n";
-    out << "[RATES]\n";
-
-    for (const auto& rateEntry : pricingManager_.getAllRates()) {
-        out << vehicleTypeToString(rateEntry.first) << "|"
-            << std::fixed << std::setprecision(2) << rateEntry.second << "\n";
-    }
-
-    out << "[SLOTS]\n";
-    for (const auto& slotEntry : slotsById_) {
-        const ParkingSlot& slot = slotEntry.second;
-        out << slot.getId() << "|"
-            << vehicleTypeToString(slot.getVehicleType()) << "|"
-            << slot.getZone() << "|"
-            << slotStatusToString(slot.getStatus()) << "\n";
-    }
-
-    out << "[ACTIVE]\n";
-    for (const auto& activeEntry : activeVehiclesByPlate_) {
-        const ParkingRecord& record = activeEntry.second;
-        out << record.getPlateNumber() << "|"
-            << vehicleTypeToString(record.getVehicleType()) << "|"
-            << record.getSlotId() << "|"
-            << toTimeT(record.getEntryTime()) << "\n";
-    }
-
-    out << "[TRANSACTIONS]\n";
-    for (const auto& transaction : transactionHistory_) {
-        out << transaction.getPlateNumber() << "|"
-            << vehicleTypeToString(transaction.getVehicleType()) << "|"
-            << transaction.getSlotId() << "|"
-            << transaction.getZone() << "|"
-            << toTimeT(transaction.getEntryTime()) << "|"
-            << toTimeT(transaction.getExitTime()) << "|"
-            << transaction.getDurationMinutes() << "|"
-            << transaction.getBilledHours() << "|"
-            << std::fixed << std::setprecision(2) << transaction.getHourlyRate() << "|"
-            << std::fixed << std::setprecision(2) << transaction.getTotalFee() << "\n";
-    }
-
-    out << "[END]\n";
-
-    if (!out.good()) {
-        errorMessage = "Failed while writing parking data to disk.";
-        return false;
-    }
-
-    out.close();
-
-    std::remove(dataFilePath_.c_str());
-    if (std::rename(tempPath.c_str(), dataFilePath_.c_str()) != 0) {
-        errorMessage = "Failed to finalize parking data file on disk.";
-        std::remove(tempPath.c_str());
-        return false;
-    }
-
-    return true;
-}
-
-bool ParkingSystem::loadState(std::string& errorMessage) {
-    std::ifstream in(dataFilePath_);
-    if (!in) {
-        return true;
-    }
-
-    std::string line;
-    if (!std::getline(in, line) || line != DATA_VERSION) {
-        errorMessage = "Saved data file has an invalid or unsupported format.";
-        return false;
-    }
-
-    std::unordered_map<VehicleType, double> loadedRates;
-    std::unordered_map<std::string, ParkingSlot> loadedSlots;
-    std::unordered_map<std::string, ParkingRecord> loadedActive;
-    std::vector<ParkingTransaction> loadedTransactions;
-
-    enum class Section { None, Rates, Slots, Active, Transactions };
-    Section section = Section::None;
-
-    while (std::getline(in, line)) {
-        if (line.empty()) {
-            continue;
-        }
-
-        if (line == "[RATES]") {
-            section = Section::Rates;
-            continue;
-        }
-        if (line == "[SLOTS]") {
-            section = Section::Slots;
-            continue;
-        }
-        if (line == "[ACTIVE]") {
-            section = Section::Active;
-            continue;
-        }
-        if (line == "[TRANSACTIONS]") {
-            section = Section::Transactions;
-            continue;
-        }
-        if (line == "[END]") {
-            break;
-        }
-
-        const std::vector<std::string> fields = splitFields(line, '|');
-
-        if (section == Section::Rates) {
-            if (fields.size() != 2) {
-                errorMessage = "Invalid rate entry in saved data file.";
-                return false;
-            }
-
-            VehicleType type{};
-            if (!parseStoredVehicleType(fields[0], type)) {
-                errorMessage = "Invalid vehicle type in saved rate data.";
-                return false;
-            }
-
-            try {
-                loadedRates[type] = std::stod(fields[1]);
-            } catch (const std::exception&) {
-                errorMessage = "Invalid rate value in saved data file.";
-                return false;
-            }
-            continue;
-        }
-
-        if (section == Section::Slots) {
-            if (fields.size() != 4) {
-                errorMessage = "Invalid slot entry in saved data file.";
-                return false;
-            }
-
-            VehicleType type{};
-            SlotStatus status{};
-            if (!parseStoredVehicleType(fields[1], type) || !parseStoredSlotStatus(fields[3], status)) {
-                errorMessage = "Invalid slot entry in saved data file.";
-                return false;
-            }
-
-            loadedSlots.emplace(fields[0], ParkingSlot(fields[0], type, fields[2], status));
-            continue;
-        }
-
-        if (section == Section::Active) {
-            if (fields.size() != 4) {
-                errorMessage = "Invalid active parking entry in saved data file.";
-                return false;
-            }
-
-            VehicleType type{};
-            if (!parseStoredVehicleType(fields[1], type)) {
-                errorMessage = "Invalid active parking entry in saved data file.";
-                return false;
-            }
-
-            try {
-                const std::time_t entryTime = static_cast<std::time_t>(std::stoll(fields[3]));
-                loadedActive.emplace(fields[0],
-                                     ParkingRecord(fields[0], type, fields[2], fromTimeT(entryTime)));
-            } catch (const std::exception&) {
-                errorMessage = "Invalid entry time in saved active parking data.";
-                return false;
-            }
-            continue;
-        }
-
-        if (section == Section::Transactions) {
-            if (fields.size() != 10) {
-                errorMessage = "Invalid transaction entry in saved data file.";
-                return false;
-            }
-
-            VehicleType type{};
-            if (!parseStoredVehicleType(fields[1], type)) {
-                errorMessage = "Invalid transaction entry in saved data file.";
-                return false;
-            }
-
-            try {
-                const std::time_t entryTime = static_cast<std::time_t>(std::stoll(fields[4]));
-                const std::time_t exitTime = static_cast<std::time_t>(std::stoll(fields[5]));
-                const long long durationMinutes = std::stoll(fields[6]);
-                const int billedHours = std::stoi(fields[7]);
-                const double hourlyRate = std::stod(fields[8]);
-                const double totalFee = std::stod(fields[9]);
-
-                loadedTransactions.emplace_back(fields[0],
-                                                type,
-                                                fields[2],
-                                                fields[3],
-                                                fromTimeT(entryTime),
-                                                fromTimeT(exitTime),
-                                                durationMinutes,
-                                                billedHours,
-                                                hourlyRate,
-                                                totalFee);
-            } catch (const std::exception&) {
-                errorMessage = "Invalid transaction values in saved data file.";
-                return false;
-            }
-        }
-    }
-
-    if (!in.good() && !in.eof()) {
-        errorMessage = "Failed while reading parking data from disk.";
-        return false;
-    }
-
-    pricingManager_.replaceAllRates(loadedRates);
-    slotsById_ = std::move(loadedSlots);
-    activeVehiclesByPlate_ = std::move(loadedActive);
-    transactionHistory_ = std::move(loadedTransactions);
-    return true;
-}
-
-bool ParkingSystem::persistState() const {
-    std::string errorMessage;
-    return saveState(errorMessage);
-}
-
-void ParkingSystem::loadPersistedState() {
-    std::string errorMessage;
-    if (loadState(errorMessage)) {
-        return;
-    }
-
-    slotsById_.clear();
-    activeVehiclesByPlate_.clear();
-    transactionHistory_.clear();
-    pricingManager_ = PricingManager();
-
-    std::cout << "Warning: Could not load saved parking data (" << errorMessage
-              << "). Starting with default settings.\n";
 }

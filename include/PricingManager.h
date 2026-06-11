@@ -30,9 +30,6 @@ public:
     // UPDATE: change rate for future exits only.
     bool updateHourlyRate(VehicleType type, double newRate, std::string& errorMessage);
 
-    std::unordered_map<VehicleType, double> getAllRates() const;
-    void replaceAllRates(const std::unordered_map<VehicleType, double>& rates);
-
 private:
     // Non-linear hash map for fast tariff lookup and update.
     std::unordered_map<VehicleType, double> hourlyRates_;

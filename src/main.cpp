@@ -498,14 +498,9 @@ int main() {
                 runDemoScenario(system);
                 pause();
                 break;
-            case 0: {
-                std::string saveError;
-                if (!system.saveState(saveError)) {
-                    std::cout << "Warning: " << saveError << "\n";
-                }
+            case 0:
                 std::cout << "\nExiting Kigali Smart Parking System. Goodbye!\n";
                 return 0;
-            }
             default:
                 std::cout << "Invalid choice.\n";
                 pause();

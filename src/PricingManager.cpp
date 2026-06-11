@@ -31,11 +31,3 @@ bool PricingManager::updateHourlyRate(VehicleType type, double newRate, std::str
     hourlyRates_[type] = newRate;
     return true;
 }
-
-std::unordered_map<VehicleType, double> PricingManager::getAllRates() const {
-    return hourlyRates_;
-}
-
-void PricingManager::replaceAllRates(const std::unordered_map<VehicleType, double>& rates) {
-    hourlyRates_ = rates;
-}
