@@ -61,8 +61,8 @@ All data is stored **in memory only** (no database).
 - empty or invalid menu choices (with retry loops)
 - invalid control characters in text input
 - duplicate slot IDs (case-insensitive: `m-01` = `M-01`)
-- invalid slot ID format (must start with letter/digit)
-- invalid plate number format (letters + digits required)
+- invalid slot ID format (max 5 chars; letters, digits, and '-' only; case-insensitive)
+- invalid plate number format (`XXX 123X`, e.g. `RAA 123A`)
 - invalid zone format (must contain at least one letter or digit)
 - maximum slot capacity enforced (1000 slots)
 - vehicle already parked (case-insensitive plate matching)
@@ -98,10 +98,10 @@ The program uses a console menu in `main.cpp`.
 | Configure motorcycle slot | 1 | `M-01`, `Motorcycle`, `Zone A` |
 | Configure car slot | 1 | `C-01`, `Car`, `Zone A` |
 | Configure truck slot | 1 | `T-01`, `Truck`, `Zone C` |
-| Register car entry | 4 | `RAD123A`, `Car`, blank preferred slot, `08:00` |
-| Try duplicate entry | 4 | `RAD123A` again → should fail |
+| Register car entry | 4 | `RAA 123A`, `Car`, blank preferred slot, `08:00` |
+| Try duplicate entry | 4 | `RAA 123A` again → should fail |
 | Register truck when full | 4 | park one truck, then try second truck → should fail |
-| Process exit | 5 | `RAD123A`, `09:20` → billed as 2 hours |
+| Process exit | 5 | `RAA 123A`, `09:20` → billed as 2 hours |
 | Update car price | 10 | `Car`, `1200` |
 | View history | 7 | shows stored rate per transaction |
 | View revenue | 9 | blank date = today |
@@ -191,8 +191,8 @@ make
 ## Suggested Manual Test Flow
 
 1. Configure slots: `M-01` (Motorcycle), `C-01` (Car), `T-01` (Truck)
-2. Register entry for plate `RAD123A` (Car)
-3. Try registering `RAD123A` again → should fail
+2. Register entry for plate `RAA 123A` (Car)
+3. Try registering `RAA 123A` again → should fail
 4. Register a second Truck when only one truck slot exists → should fail gracefully
 5. Process exit after 1 hour 20 minutes → billed as 2 hours
 6. Update Car price, complete another exit, and verify old history keeps old rate

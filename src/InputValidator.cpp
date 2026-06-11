@@ -74,16 +74,23 @@ bool InputValidator::isValidSlotId(const std::string& slotId, std::string& error
         return false;
     }
 
-    if (!std::isalnum(static_cast<unsigned char>(slotId.front()))) {
-        errorMessage = "Slot ID must start with a letter or digit.";
-        return false;
-    }
+    bool hasLetter = false;
+    bool hasDigit = false;
 
     for (char c : slotId) {
-        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '-' && c != '_') {
-            errorMessage = "Slot ID may contain only letters, numbers, '-' or '_'.";
+        if (std::isalpha(static_cast<unsigned char>(c))) {
+            hasLetter = true;
+        } else if (std::isdigit(static_cast<unsigned char>(c))) {
+            hasDigit = true;
+        } else if (c != '-') {
+            errorMessage = "Slot ID may contain only letters, digits, and '-' (case-insensitive).";
             return false;
         }
+    }
+
+    if (!hasLetter || !hasDigit) {
+        errorMessage = "Slot ID must contain at least one letter and one digit.";
+        return false;
     }
 
     return true;
@@ -99,28 +106,34 @@ bool InputValidator::isValidPlateNumber(const std::string& plateNumber, std::str
         return false;
     }
 
-    if (plateNumber.length() < MIN_PLATE_LENGTH || plateNumber.length() > MAX_PLATE_LENGTH) {
-        errorMessage = "Plate number must be between " + std::to_string(MIN_PLATE_LENGTH) +
-                       " and " + std::to_string(MAX_PLATE_LENGTH) + " characters.";
+    const std::string normalized = normalizeIdentifier(plateNumber);
+
+    if (normalized.length() != PLATE_NUMBER_LENGTH) {
+        errorMessage = "Plate number must follow format XXX 123X (e.g. RAA 123A).";
         return false;
     }
 
-    bool hasLetter = false;
-    bool hasDigit = false;
-
-    for (char c : plateNumber) {
-        if (std::isalpha(static_cast<unsigned char>(c))) {
-            hasLetter = true;
-        } else if (std::isdigit(static_cast<unsigned char>(c))) {
-            hasDigit = true;
-        } else if (c != '-' && c != ' ') {
-            errorMessage = "Plate number may contain only letters, digits, spaces, or '-'.";
-            return false;
-        }
+    if (!std::isalpha(static_cast<unsigned char>(normalized[0])) ||
+        !std::isalpha(static_cast<unsigned char>(normalized[1])) ||
+        !std::isalpha(static_cast<unsigned char>(normalized[2]))) {
+        errorMessage = "Plate number must start with three letters.";
+        return false;
     }
 
-    if (!hasLetter || !hasDigit) {
-        errorMessage = "Plate number must contain both letters and digits.";
+    if (normalized[3] != ' ') {
+        errorMessage = "Plate number must include a space between the letter group and digits.";
+        return false;
+    }
+
+    if (!std::isdigit(static_cast<unsigned char>(normalized[4])) ||
+        !std::isdigit(static_cast<unsigned char>(normalized[5])) ||
+        !std::isdigit(static_cast<unsigned char>(normalized[6]))) {
+        errorMessage = "Plate number must contain three digits after the space.";
+        return false;
+    }
+
+    if (!std::isalpha(static_cast<unsigned char>(normalized[7]))) {
+        errorMessage = "Plate number must end with one letter.";
         return false;
     }
 
@@ -226,6 +239,31 @@ bool InputValidator::isValidDate(const std::string& date, std::string& errorMess
     int maxDay = daysInMonth(year, month);
     if (day < 1 || day > maxDay) {
         errorMessage = "Day is invalid for the given month and year.";
+        return false;
+    }
+
+    return true;
+}
+
+bool InputValidator::isNotFutureDate(const std::string& date, std::string& errorMessage) {
+    if (!isValidDate(date, errorMessage)) {
+        return false;
+    }
+
+    auto now = std::chrono::system_clock::now();
+    std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
+    std::tm* localNow = std::localtime(&nowTime);
+    if (!localNow) {
+        errorMessage = "Unable to read current local date.";
+        return false;
+    }
+
+    std::ostringstream oss;
+    oss << std::put_time(localNow, "%Y-%m-%d");
+    const std::string today = oss.str();
+
+    if (date > today) {
+        errorMessage = "Daily report date cannot be in the future.";
         return false;
     }
 

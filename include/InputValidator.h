@@ -17,9 +17,8 @@
 
 class InputValidator {
 public:
-    static constexpr int MAX_SLOT_ID_LENGTH = 20;
-    static constexpr int MAX_PLATE_LENGTH = 15;
-    static constexpr int MIN_PLATE_LENGTH = 3;
+    static constexpr int MAX_SLOT_ID_LENGTH = 5;
+    static constexpr int PLATE_NUMBER_LENGTH = 8;
     static constexpr int MAX_ZONE_LENGTH = 50;
     static constexpr int MAX_SLOTS_ALLOWED = 1000;
     static constexpr int MAX_PARKING_DAYS = 30;
@@ -37,6 +36,7 @@ public:
     static bool isFiniteNumber(double value);
 
     static bool isValidDate(const std::string& date, std::string& errorMessage);
+    static bool isNotFutureDate(const std::string& date, std::string& errorMessage);
     static bool parseDateTime(const std::string& input,
                               std::chrono::system_clock::time_point& out,
                               std::string& errorMessage);

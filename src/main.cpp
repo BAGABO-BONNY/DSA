@@ -11,7 +11,7 @@
  *
  * Suggested manual test inputs:
  *   Slot IDs : M-01, C-01, T-01
- *   Plates   : RAD123A, MOT45B, TRK99Z
+ *   Plates   : RAA 123A, RAE 710F, RBG 456K
  *   Times    : HH:MM or YYYY-MM-DD HH:MM
  */
 #include "InputValidator.h"
@@ -403,27 +403,27 @@ void runDemoScenario(ParkingSystem& system) {
 
     auto baseTime = std::chrono::system_clock::now() - std::chrono::hours(3);
 
-    system.registerVehicleEntry("RAD123A", VehicleType::Car, baseTime, allocated, error);
-    system.registerVehicleEntry("MOT45B", VehicleType::Motorcycle, baseTime + std::chrono::minutes(10),
+    system.registerVehicleEntry("RAA 123A", VehicleType::Car, baseTime, allocated, error);
+    system.registerVehicleEntry("RAE 710F", VehicleType::Motorcycle, baseTime + std::chrono::minutes(10),
                                 allocated, error);
 
     std::string duplicateError;
-    system.registerVehicleEntry("RAD123A", VehicleType::Car, baseTime, allocated, duplicateError);
+    system.registerVehicleEntry("RAA 123A", VehicleType::Car, baseTime, allocated, duplicateError);
 
     auto truckTime = baseTime + std::chrono::minutes(20);
-    system.registerVehicleEntry("TRK99Z", VehicleType::Truck, truckTime, allocated, error);
+    system.registerVehicleEntry("RBG 456K", VehicleType::Truck, truckTime, allocated, error);
 
     std::string noSlotError;
-    system.registerVehicleEntry("TRK88X", VehicleType::Truck, truckTime + std::chrono::minutes(5),
+    system.registerVehicleEntry("RBT 888X", VehicleType::Truck, truckTime + std::chrono::minutes(5),
                                 allocated, noSlotError);
 
     ParkingTransaction firstExit("", VehicleType::Car, "", "", baseTime, baseTime, 0, 0, 0.0, 0.0);
-    system.processVehicleExit("MOT45B", baseTime + std::chrono::minutes(25), firstExit, error);
+    system.processVehicleExit("RAE 710F", baseTime + std::chrono::minutes(25), firstExit, error);
 
     system.updateParkingPrice(VehicleType::Car, 1200.0, error);
 
     ParkingTransaction secondExit("", VehicleType::Car, "", "", baseTime, baseTime, 0, 0, 0.0, 0.0);
-    system.processVehicleExit("RAD123A", baseTime + std::chrono::hours(1) + std::chrono::minutes(20),
+    system.processVehicleExit("RAA 123A", baseTime + std::chrono::hours(1) + std::chrono::minutes(20),
                               secondExit, error);
 
     std::cout << "Demo configured 4 slots.\n";

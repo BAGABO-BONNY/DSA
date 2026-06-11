@@ -315,7 +315,7 @@ std::vector<ParkingTransaction> ParkingSystem::getTransactionsByPlate(const std:
 }
 
 bool ParkingSystem::getDailyRevenue(const std::string& date, double& revenue, std::string& errorMessage) const {
-    if (!InputValidator::isValidDate(date, errorMessage)) {
+    if (!InputValidator::isNotFutureDate(date, errorMessage)) {
         revenue = 0.0;
         return false;
     }
