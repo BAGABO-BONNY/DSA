@@ -1,8 +1,9 @@
 #include "ParkingSlot.h"
 
 // INSERT: new slots always start as Available.
-ParkingSlot::ParkingSlot(const std::string& id, VehicleType vehicleType, const std::string& zone)
-    : id_(id), vehicleType_(vehicleType), zone_(zone), status_(SlotStatus::Available) {}
+ParkingSlot::ParkingSlot(const std::string& id, VehicleType vehicleType, const std::string& zone,
+                         SlotStatus status)
+    : id_(id), vehicleType_(vehicleType), zone_(zone), status_(status) {}
 
 const std::string& ParkingSlot::getId() const { return id_; }
 
